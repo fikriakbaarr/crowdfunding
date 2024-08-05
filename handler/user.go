@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crowdfunding/auth"
 	"crowdfunding/helpher"
 	"crowdfunding/user"
 	"fmt"
@@ -11,16 +12,14 @@ import (
 
 type userHandler struct {
 	userService user.Service
+	authService auth.Service
 }
 
-func NewUserHandler(userService user.Service) *userHandler {
-	return &userHandler{userService}
+func NewUserHandler(userService user.Service, authService auth.Service) *userHandler {
+	return &userHandler{userService, authService}
 }
 
 func (h *userHandler) RegisterUser(c *gin.Context) {
-	// tangkap input dari user
-	// map input dari user ke struct RegisterUserInput
-	// struct di atas dipassing sebagai parameter service
 
 	var input user.RegisterUserInput
 
@@ -43,9 +42,14 @@ func (h *userHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	// token, err := h.jwtService.GenerateToken()
+	token, err := h.authService.GenerateToken(newUser.ID)
+	if err != nil {
+		response := helpher.APIResponse("Register account failed", http.StatusBadRequest, "error", nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
 
-	formatter := user.FormatUser(newUser, "tokentokentoken")
+	formatter := user.FormatUser(newUser, token)
 
 	response := helpher.APIResponse("Account has been registered", http.StatusOK, "success", formatter)
 
@@ -76,7 +80,14 @@ func (h *userHandler) Login(c *gin.Context) {
 		return
 	}
 
-	formatter := user.FormatUser(loggedinUser, "tokentokentoken")
+	token, err := h.authService.GenerateToken(loggedinUser.ID)
+	if err != nil {
+		response := helpher.APIResponse("Login failed", http.StatusBadRequest, "error", nil)
+		c.JSON(http.StatusBadRequest, response)
+		return
+	}
+
+	formatter := user.FormatUser(loggedinUser, token)
 
 	response := helpher.APIResponse("Succesfuly loggedin", http.StatusOK, "success", formatter)
 
